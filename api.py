@@ -1,3 +1,5 @@
+import inspect
+
 from parse import parse
 from webob import Request, Response
 
@@ -43,7 +45,13 @@ class API:
         handler, kwargs = self.find_handler(request_path=request.path)
 
         if handler is not None:
-            handler(request, response, **kwargs)
+            if inspect.isclass(handler):
+                handler_function = getattr(handler(), request.method.lower(), None)
+                if handler_function is None:
+                    raise AttributeError("Method not allowed", request.method)  # class-based handler is being used
+                handler_function(request, response, **kwargs)
+            else:
+                handler(request, response, **kwargs)
         else:
             self.default_response(response)
 
