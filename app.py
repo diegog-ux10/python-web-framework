@@ -29,4 +29,12 @@ class BooksResource:
 def handler(req, resp):
     resp.text = "sample"
 
+def custom_exception_handler(request, response, exception_cls):
+    response.text = str(exception_cls)
+    
+@app.route("/exception")
+def exception_throwing_handler(request, response):
+    raise AssertionError("This handler should not be used.")
+
+app.add_exception_handler(custom_exception_handler)
 app.add_route("/sample", handler) 

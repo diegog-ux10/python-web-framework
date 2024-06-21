@@ -1,14 +1,22 @@
+import os
 import inspect
 
 from parse import parse
 from webob import Request, Response
 from requests import Session as RequestsSession
 from wsgiadapter import WSGIAdapter as RequestsWSGIAdapter
+from jinja2 import Environment, FileSystemLoader
 
 
 class API:
-    def __init__(self):
+    def __init__(self, templates_dir="templates"):
         self.routes = {}
+
+        self.templates_env = Environment(
+            loader=FileSystemLoader(os.path.abspath(templates_dir))
+        )
+
+        self.exception_handler = None
 
     def __call__(self, environ, start_response):
         request = Request(environ)
@@ -43,18 +51,23 @@ class API:
 
     def handle_request(self, request):
         response = Response()
-
         handler, kwargs = self.find_handler(request_path=request.path)
 
-        if handler is not None:
-            if inspect.isclass(handler):
-                handler = getattr(handler(), request.method.lower(), None)
-                if handler is None:
-                    raise AttributeError("Method not allowed", request.method)
+        try:
+            if handler is not None:
+                if inspect.isclass(handler):
+                    handler = getattr(handler(), request.method.lower(), None)
+                    if handler is None:
+                        raise AttributeError("Method not allowed", request.method)
 
-            handler(request, response, **kwargs)
-        else:
-            self.default_response(response)
+                handler(request, response, **kwargs)
+            else:
+                self.default_response(response)
+        except Exception as e:
+            if self.exception_handler is None:
+                raise e
+            else:
+                self.exception_handler(request, response, e)
 
         return response
     
@@ -63,3 +76,5 @@ class API:
         session.mount(prefix=base_url, adapter=RequestsWSGIAdapter(self))
         return session
             
+    def add_exception_handler(self, exception_handler):
+        self.exception_handler = exception_handler
