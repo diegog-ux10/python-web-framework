@@ -74,4 +74,28 @@ def test_class_based_handler_not_allowed_method(api, client):
 
     with pytest.raises(AttributeError):
         client.get("http://testserver/book")
+
+def test_alternative_route(api, client):
+    response_text = "Alternative way to add a route"
+
+    def home(req, resp):
+        resp.text = response_text
+
+    api.add_route("/alternative", home)
+
+    assert client.get("http://testserver/alternative").text == response_text
+
+def test_custom_exception_handler(api, client):
+    def on_exception(req, resp, exc):
+        resp.text = "AttributeErrorHappened"
+
+    api.add_exception_handler(on_exception)
+
+    @api.route("/")
+    def index(req, resp):
+        raise AttributeError()
+
+    response = client.get("http://testserver/")
+
+    assert response.text == "AttributeErrorHappened"
         

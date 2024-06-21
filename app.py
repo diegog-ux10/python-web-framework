@@ -24,4 +24,9 @@ class BooksResource:
         resp.text = "Books Page"
 
     def post(self, req, resp):
-        resp.text = "Endpoint to create a book" 
+        resp.text = "Endpoint to create a book"
+
+def handler(req, resp):
+    resp.text = "sample"
+
+app.add_route("/sample", handler) 
